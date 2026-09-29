@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>EEUKOSUI • ENASTO 128 TB BASIC SYSTEM</title>
+
+<style>
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: radial-gradient(circle at top, #1b2340, #05060a);
+    color: #e6ecff;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  header {
+    padding: 8px 16px;
+    background: linear-gradient(90deg, #1f2a4d, #283a6b);
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    grid-template-rows: 1fr auto;
+    gap: 4px;
+    padding: 4px;
+  }
+  .panel {
+    border-radius: 6px;
+    background: rgba(8, 12, 28, 0.9);
+    border: 1px solid rgba(120, 150, 255, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 4px 8px;
+    font-size: 12px;
+    background: linear-gradient(90deg, #222b4a, #1a2238);
+    border-bottom: 1px solid rgba(120, 150, 255, 0.25);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .panel-body {
+    flex: 1;
+    display: flex;
+  }
+  #editor {
+    width: 100%;
+    height: 100%;
+    background: #050712;
+    color: #e6ecff;
+    border: none;
+    padding: 8px;
+    font-family: "Fira Code", monospace;
+    font-size: 13px;
+    resize: none;
+    outline: none;
+  }
+  #previewFrame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #02030a;
+  }
+  #log {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #050712;
+    color: #9fb3ff;
+    font-family: "Fira Code", monospace;
+    font-size: 11px;
+    padding: 6px;
+    resize: none;
+    outline: none;
+  }
+  .toolbar button, .toolbar select {
+    margin-left: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    border-radius: 4px;
+    border: 1px solid rgba(150, 180, 255, 0.5);
+    background: rgba(10, 18, 40, 0.9);
+    color: #e6ecff;
+    cursor: pointer;
+  }
+  footer {
+    padding: 4px 8px;
+    font-size: 11px;
+    background: #050712;
+    border-top: 1px solid rgba(120, 150, 255, 0.25);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+</style>
+</head>
+
+<body>
+
+<header>
+  <div><strong>EEUKOSUI</strong> • ENASTO 128 TB BASIC SYSTEM</div>
+
+  <div class="toolbar">
+    <label>Bank:</label>
+    <select id="bankSelect" onchange="enasto.setBank(this.value)">
+      <option value="0">0 • OS</option>
+      <option value="1" selected>1 • HTMLJSCSSC++</option>
+      <option value="2">2 • Universe</option>
+      <option value="3">3 • Rituals</option>
+      <option value="4">4 • Game</option>
+      <option value="5">5 • FS/TRDOS</option>
+      <option value="6">6 • Memory Atlas</option>
+      <option value="7">7 • Lab</option>
+    </select>
+
+    <label>Dimension:</label>
+    <select id="dimSelect" onchange="enasto.setDimension(this.value)">
+      <option value="3">3D</option>
+      <option value="4">4D</option>
+      <option value="10">10D</option>
+    </select>
+
+    <button onclick="enasto.save()">Save</button>
+    <button onclick="enasto.load()">Load</button>
+    <button onclick="enasto.run()">Run / Preview</button>
+  </div>
+</header>
+
+<main>
+
+  <section class="panel">
+    <div class="panel-header">ENASTO HTMLJSCSSC++ Editor</div>
+    <div class="panel-body">
+      <textarea id="editor"></textarea>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">ENASTO Preview (3D/4D/10D)</div>
+    <div class="panel-body">
+      <iframe id="previewFrame"></iframe>
+    </div>
+  </section>
+
+  <section class="panel" style="grid-column: 1 / span 2; height: 140px;">
+    <div class="panel-header">ENASTO System Log</div>
+    <div class="panel-body">
+      <textarea id="log" readonly></textarea>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <span id="statusLabel">Ready.</span>
+  <span>HTMLJSCSSC++ • EEJONSLEX • EEJS • 3D/4D/10D</span>
+</footer>
+
+<script>
+const enasto = {
+  state: {
+    bank: 1,
+    dimension: 3,
+    currentFile: null,
+    config: {}
+  },
+
+  log(msg) {
+    const log = document.getElementById("log");
+    const t = new Date().toLocaleTimeString();
+    log.value += `[${t}] ${msg}\n`;
+    log.scrollTop = log.scrollHeight;
+  },
+
+  setStatus(msg) {
+    document.getElementById("statusLabel").textContent = msg;
+  },
+
+  setBank(n) {
+    this.state.bank = Number(n);
+    this.log(`Bank → ${n} (ENASTO 128 TB BASIC).`);
+    this.setStatus(`Bank ${n} active.`);
+  },
+
+  setDimension(d) {
+    this.state.dimension = Number(d);
+    this.log(`Dimension → ${d}D.`);
+    this.setStatus(`${d}D mode active.`);
+  },
+
+  parseEEJONSLEX() {
+    const code = document.getElementById("editor").value;
+    const match = code.match(/<!--EEJONSLEX([\s\S]*?)EEJONSLEX-->/);
+    if (!match) {
+      this.state.config = {};
+      this.log("No EEJONSLEX block found.");
+      return;
+    }
+    try {
+      this.state.config = JSON.parse(match[1]);
+      this.log("EEJONSLEX config loaded.");
+    } catch {
+      this.state.config = {};
+      this.log("EEJONSLEX parse error.");
+    }
+  },
+
+  runEEJS() {
+    const cfg = this.state.config;
+    if (cfg.ritual === "CORE_IGNITE") {
+      this.log("EEJS: CORE_IGNITE ritual triggered.");
+    }
+    if (cfg.universe) {
+      this.log(`EEJS: Universe = ${cfg.universe}.`);
+    }
+  },
+
+  async save() {
+    const name = prompt("Save as:", this.state.currentFile || "NEWFILE");
+    if (!name) return;
+
+    const code = document.getElementById("editor").value;
+
+    // Replace with your real FS system
+    localStorage.setItem(name + ".dhero", JSON.stringify({
+      code,
+      bank: this.state.bank,
+      dimension: this.state.dimension,
+      config: this.state.config
+    }));
+
+    this.state.currentFile = name;
+    this.log(`Saved ${name}.dhero`);
+    this.setStatus("Saved.");
+  },
+
+  async load() {
+    const name = prompt("Load file:");
+    if (!name) return;
+
+    const raw = localStorage.getItem(name + ".dhero");
+    if (!raw) {
+      this.log(`File not found: ${name}.dhero`);
+      return;
+    }
+
+    const file = JSON.parse(raw);
+
+    document.getElementById("editor").value = file.code;
+    document.getElementById("bankSelect").value = file.bank;
+    document.getElementById("dimSelect").value = file.dimension;
+
+    this.state.bank = file.bank;
+    this.state.dimension = file.dimension;
+    this.state.config = file.config || {};
+    this.state.currentFile = name;
+
+    this.log(`Loaded ${name}.dhero`);
+    this.setStatus("Loaded.");
+  },
+
+  run() {
+    const code = document.getElementById("editor").value;
+
+    this.parseEEJONSLEX();
+    this.runEEJS();
+
+    const dim = this.state.dimension;
+
+    const dimStyle = `
+      <style>
+        body { margin:0; font-family:system-ui; color:#e6ecff; }
+        .dim3  { transform: perspective(800px) rotateY(0deg); }
+        .dim4  { transform: perspective(800px) rotateY(18deg); filter:hue-rotate(40deg); }
+        .dim10 { transform: perspective(800px) rotateY(35deg) skewX(8deg); filter:hue-rotate(120deg) saturate(1.4); }
+      </style>
+    `;
+
+    const wrapped = `
+      <html>
+        <head>${dimStyle}</head>
+        <body class="dim${dim}">
+          ${code}
+        </body>
+      </html>
+    `;
+
+    document.getElementById("previewFrame").srcdoc = wrapped;
+
+    this.log(`RUN → Preview (Bank ${this.state.bank}, ${dim}D).`);
+    this.setStatus(`Preview updated • Bank ${this.state.bank} • ${dim}D`);
+  }
+};
+
+window.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("editor").value =
+`<!--EEJONSLEX
+{
+  "project": "ENASTO_DEMO",
+  "ritual": "CORE_IGNITE",
+  "universe": "MARS"
+}
+EEJONSLEX-->
+
+<h1>ENASTO HTMLJSCSSC++</h1>
+<p>Running inside EEUKOSUI • ENASTO 128 TB BASIC SYSTEM.</p>`;
+});
+</script>
+
+</body>
+</html<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>EEUKOSUI • ENASTO 128 TB BASIC SYSTEM</title>
+
+<style>
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    background: radial-gradient(circle at top, #1b2340, #05060a);
+    color: #e6ecff;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  header {
+    padding: 8px 16px;
+    background: linear-gradient(90deg, #1f2a4d, #283a6b);
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    grid-template-rows: 1fr auto;
+    gap: 4px;
+    padding: 4px;
+  }
+  .panel {
+    border-radius: 6px;
+    background: rgba(8, 12, 28, 0.9);
+    border: 1px solid rgba(120, 150, 255, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 4px 8px;
+    font-size: 12px;
+    background: linear-gradient(90deg, #222b4a, #1a2238);
+    border-bottom: 1px solid rgba(120, 150, 255, 0.25);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .panel-body {
+    flex: 1;
+    display: flex;
+  }
+  #editor {
+    width: 100%;
+    height: 100%;
+    background: #050712;
+    color: #e6ecff;
+    border: none;
+    padding: 8px;
+    font-family: "Fira Code", monospace;
+    font-size: 13px;
+    resize: none;
+    outline: none;
+  }
+  #previewFrame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #02030a;
+  }
+  #log {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #050712;
+    color: #9fb3ff;
+    font-family: "Fira Code", monospace;
+    font-size: 11px;
+    padding: 6px;
+    resize: none;
+    outline: none;
+  }
+  .toolbar button, .toolbar select, .toolbar input[type="range"] {
+    margin-left: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    border-radius: 4px;
+    border: 1px solid rgba(150, 180, 255, 0.5);
+    background: rgba(10, 18, 40, 0.9);
+    color: #e6ecff;
+    cursor: pointer;
+  }
+  .toolbar label {
+    margin-left: 6px;
+    font-size: 11px;
+  }
+  footer {
+    padding: 4px 8px;
+    font-size: 11px;
+    background: #050712;
+    border-top: 1px solid rgba(120, 150, 255, 0.25);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+</style>
+</head>
+
+<body>
+
+<header>
+  <div><strong>EEUKOSUI</strong> • ENASTO 128 TB BASIC SYSTEM</div>
+
+  <div class="toolbar">
+    <label>Bank:</label>
+    <select id="bankSelect" onchange="enasto.setBank(this.value)">
+      <option value="0">0 • OS</option>
+      <option value="1" selected>1 • HTMLJSCSSC++</option>
+      <option value="2">2 • Universe</option>
+      <option value="3">3 • Rituals</option>
+      <option value="4">4 • Game</option>
+      <option value="5">5 • FS/TRDOS</option>
+      <option value="6">6 • Memory Atlas</option>
+      <option value="7">7 • Lab</option>
+    </select>
+
+    <label>Dimension:</label>
+    <select id="dimSelect" onchange="enasto.setDimension(this.value)">
+      <option value="3">3D</option>
+      <option value="4">4D</option>
+      <option value="10">10D</option>
+      <option value="100">100D</option>
+      <option value="500">500D</option>
+      <option value="1000">1000D</option>
+      <option value="10000">10,000D</option>
+      <option value="1000000">1,000,000D</option>
+    </select>
+
+    <label>Drunk:</label>
+    <input type="range" id="drunkLevel" min="0" max="3" step="1" value="1"
+           onchange="enasto.setDrunkLevel(this.value)">
+
+    <button onclick="enasto.save()">Save</button>
+    <button onclick="enasto.load()">Load</button>
+    <button onclick="enasto.run()">Run / Preview</button>
+  </div>
+</header>
+
+<main>
+
+  <section class="panel">
+    <div class="panel-header">ENASTO HTMLJSCSSC++ Editor</div>
+    <div class="panel-body">
+      <textarea id="editor"></textarea>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-header">ENASTO Preview (3D/4D/10D/100D/500D/1000D/10,000D/1,000,000D)</div>
+    <div class="panel-body">
+      <iframe id="previewFrame"></iframe>
+    </div>
+  </section>
+
+  <section class="panel" style="grid-column: 1 / span 2; height: 140px;">
+    <div class="panel-header">ENASTO System Log</div>
+    <div class="panel-body">
+      <textarea id="log" readonly></textarea>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <span id="statusLabel">Ready.</span>
+  <span>HTMLJSCSSC++ • EEJONSLEX • EEJS • 3D–1,000,000D</span>
+</footer>
+
+<script>
+const enasto = {
+  state: {
+    bank: 1,
+    dimension: 3,
+    currentFile: null,
+    config: {},
+    drunkLevel: 1
+  },
+
+  log(msg) {
+    const log = document.getElementById("log");
+    const t = new Date().toLocaleTimeString();
+    log.value += `[${t}] ${msg}\n`;
+    log.scrollTop = log.scrollHeight;
+  },
+
+  setStatus(msg) {
+    document.getElementById("statusLabel").textContent = msg;
+  },
+
+  setBank(n) {
+    this.state.bank = Number(n);
+    this.log(`Bank → ${n} (ENASTO 128 TB BASIC).`);
+    this.setStatus(`Bank ${n} active.`);
+  },
+
+  setDimension(d) {
+    this.state.dimension = Number(d);
+    this.log(`Dimension → ${d}D.`);
+    this.setStatus(`${d}D mode active.`);
+  },
+
+  setDrunkLevel(level) {
+    this.state.drunkLevel = Number(level);
+    this.log(`Drunk Level → ${level}`);
+    this.setStatus(`Drunk Level ${level}.`);
+  },
+
+  parseEEJONSLEX() {
+    const code = document.getElementById("editor").value;
+    const match = code.match(/<!--EEJONSLEX([\s\S]*?)EEJONSLEX-->/);
+    if (!match) {
+      this.state.config = {};
+      this.log("No EEJONSLEX block found.");
+      return;
+    }
+    try {
+      this.state.config = JSON.parse(match[1]);
+      this.log("EEJONSLEX config loaded.");
+    } catch {
+      this.state.config = {};
+      this.log("EEJONSLEX parse error.");
+    }
+  },
+
+  runEEJS() {
+    const cfg = this.state.config;
+    if (cfg.ritual === "CORE_IGNITE") {
+      this.log("EEJS: CORE_IGNITE ritual triggered.");
+    }
+    if (cfg.universe) {
+      this.log(`EEJS: Universe = ${cfg.universe}.`);
+    }
+  },
+
+  async save() {
+    const name = prompt("Save as:", this.state.currentFile || "NEWFILE");
+    if (!name) return;
+
+    const code = document.getElementById("editor").value;
+
+    localStorage.setItem(name + ".dhero", JSON.stringify({
+      code,
+      bank: this.state.bank,
+      dimension: this.state.dimension,
+      config: this.state.config,
+      drunkLevel: this.state.drunkLevel
+    }));
+
+    this.state.currentFile = name;
+    this.log(`Saved ${name}.dhero`);
+    this.setStatus("Saved.");
+  },
+
+  async load() {
+    const name = prompt("Load file:");
+    if (!name) return;
+
+    const raw = localStorage.getItem(name + ".dhero");
+    if (!raw) {
+      this.log(`File not found: ${name}.dhero`);
+      return;
+    }
+
+    const file = JSON.parse(raw);
+
+    document.getElementById("editor").value = file.code;
+    document.getElementById("bankSelect").value = file.bank;
+    document.getElementById("dimSelect").value = file.dimension;
+    document.getElementById("drunkLevel").value = file.drunkLevel ?? 1;
+
+    this.state.bank = file.bank;
+    this.state.dimension = file.dimension;
+    this.state.config = file.config || {};
+    this.state.currentFile = name;
+    this.state.drunkLevel = file.drunkLevel ?? 1;
+
+    this.log(`Loaded ${name}.dhero`);
+    this.setStatus("Loaded.");
+  },
+
+  run() {
+    const code = document.getElementById("editor").value;
+
+    this.parseEEJONSLEX();
+    this.runEEJS();
+
+    const dim = this.state.dimension;
+    const drunk = this.state.drunkLevel || 1;
+
+    const dimStyle = `
+      <style>
+        body { margin:0; font-family:system-ui; color:#e6ecff; }
+
+        /* BASE DIMENSIONS */
+
+        .dim3  { transform: perspective(800px) rotateY(0deg); }
+
+        .dim4  { 
+          transform: perspective(800px) rotateY(18deg);
+          filter: hue-rotate(40deg);
+        }
+
+        .dim10 { 
+          transform: perspective(800px) rotateY(35deg) skewX(8deg);
+          filter: hue-rotate(120deg) saturate(1.4);
+        }
+
+        /* 100D — mild wobble */
+        @keyframes wobble100 {
+          0% { transform: perspective(800px) rotateY(0deg); }
+          50% { transform: perspective(800px) rotateY(1deg) translateX(1px); }
+          100% { transform: perspective(800px) rotateY(0deg); }
+        }
+        .dim100 {
+          animation: wobble100 6s ease-in-out infinite;
+          filter: hue-rotate(80deg) saturate(1.1);
+        }
+
+        /* 500D — medium warp */
+        @keyframes warp500 {
+          0% { transform: perspective(800px) rotateY(0deg) skewX(0deg); }
+          50% { transform: perspective(800px) rotateY(5deg) skewX(3deg); }
+          100% { transform: perspective(800px) rotateY(0deg) skewX(0deg); }
+        }
+        .dim500 {
+          animation: warp500 5s ease-in-out infinite;
+          filter: hue-rotate(150deg) saturate(1.3) brightness(1.05);
+        }
+
+        /* 1000D — full tipsy-space */
+        @keyframes tipsy1000 {
+          0% { transform: perspective(800px) rotateY(0deg) translateX(0px) skewX(0deg); }
+          25% { transform: perspective(800px) rotateY(2deg) translateX(3px) skewX(1deg); }
+          50% { transform: perspective(800px) rotateY(-2deg) translateX(-3px) skewX(-1deg); }
+          75% { transform: perspective(800px) rotateY(1deg) translateX(2px) skewX(0.5deg); }
+          100% { transform: perspective(800px) rotateY(0deg) translateX(0px) skewX(0deg); }
+        }
+        .dim1000 {
+          animation: tipsy1000 4s ease-in-out infinite;
+          filter: hue-rotate(200deg) saturate(1.8) brightness(1.1);
+        }
+
+        /* 10,000D — fractal shimmer */
+        @keyframes fractal10000 {
+          0% { filter: hue-rotate(0deg) blur(0px); }
+          25% { filter: hue-rotate(90deg) blur(1px); }
+          50% { filter: hue-rotate(180deg) blur(2px); }
+          75% { filter: hue-rotate(270deg) blur(1px); }
+          100% { filter: hue-rotate(360deg) blur(0px); }
+        }
+        .dim10000 {
+          animation: fractal10000 3s linear infinite;
+          transform: perspective(800px) rotateY(45deg) skewX(12deg) scale(1.05);
+        }
+
+        /* 1,000,000D — collapse + breach + gravity + portal */
+
+        @keyframes dimensionCollapse {
+          0%   { transform: scale(1) rotateY(0deg); }
+          40%  { transform: scale(0.7) rotateY(20deg); }
+          60%  { transform: scale(1.2) rotateY(-25deg); }
+          100% { transform: scale(1) rotateY(0deg); }
+        }
+
+        @keyframes realityBreach {
+          0%   { clip-path: inset(0% 0% 0% 0%); }
+          30%  { clip-path: inset(5% 20% 10% 0%); }
+          60%  { clip-path: inset(10% 0% 5% 25%); }
+          100% { clip-path: inset(0% 0% 0% 0%); }
+        }
+
+        @keyframes gravityDrift {
+          0%   { transform-origin: 50% 50%; }
+          50%  { transform-origin: 50% 80%; }
+          100% { transform-origin: 50% 50%; }
+        }
+
+        @keyframes portalDistortion {
+          0%   { filter: contrast(1) saturate(1); }
+          50%  { filter: contrast(1.6) saturate(2) blur(1px); }
+          100% { filter: contrast(1) saturate(1); }
+        }
+
+        .dim1000000 {
+          animation:
+            dimensionCollapse 5s ease-in-out infinite,
+            realityBreach 7s ease-in-out infinite,
+            gravityDrift 6s ease-in-out infinite,
+            portalDistortion 4s ease-in-out infinite;
+          transform: perspective(1000px) rotateY(60deg) skewX(18deg) scale(1.1);
+        }
+
+        /* DRUNK LEVEL INTENSITY */
+
+        body[data-drunk="1"] { --ripple: 1px; --sway: 1deg; }
+        body[data-drunk="2"] { --ripple: 2px; --sway: 3deg; }
+        body[data-drunk="3"] { --ripple: 4px; --sway: 6deg; }
+
+        @keyframes rippleShader {
+          0% { filter: drop-shadow(0 0 var(--ripple) #66aaff); }
+          50% { filter: drop-shadow(0 0 calc(var(--ripple) * 2) #99ccff); }
+          100% { filter: drop-shadow(0 0 var(--ripple) #66aaff); }
+        }
+
+        .ripple {
+          animation: rippleShader 2s ease-in-out infinite;
+        }
+      </style>
+    `;
+
+    let wrapped = `
+      <html>
+        <head>${dimStyle}</head>
+        <body class="dim${dim}" data-drunk="${drunk}">
+          ${code}
+        </body>
+      </html>
+    `;
+
+    document.getElementById("previewFrame").srcdoc = wrapped;
+
+    this.log(`RUN → Preview (Bank ${this.state.bank}, ${dim}D, Drunk ${drunk}).`);
+    this.setStatus(`Preview updated • Bank ${this.state.bank} • ${dim}D • Drunk ${drunk}`);
+  }
+};
+
+window.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("editor").value =
+`<!--EEJONSLEX
+{
+  "project": "ENASTO",
+  "ritual": "CORE_IGNITE",
+  "universe": "MARS"
+}
+
+EEJONSLEX-->
+
+<h1 class="ripple">ENASTO HTMLJSCSSC++</h1>
+<p>Running inside EEUKOSUI • ENASTO 128 TB BASIC SYSTEM © 1989–2026 EEUKOSUI • ENASTO SYSTEMS — ALL RIGHTS RESERVED.</p>
+<p>Try switching dimensions and Drunk Level in the top bar.</p>`;
+
+});
+</script>
+
+</body >
+</html <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ENASTO 13700 • Unified Memory Atlas COPYRIGHT LAW • Visual Lab</title>
+<style>
+  body { margin:0; background:#000; color:#0f0; font-family:Consolas,monospace; font-size:12px; }
+  .wrap {
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    grid-template-rows:auto auto auto auto;
+    gap:6px;
+    padding:6px;
+    height:100vh;
+    box-sizing:border-box;
+  }
+  .panel { border:1px solid #0f0; padding:4px; overflow:auto; white-space:pre-wrap; }
+  .title { background:#020; margin:-4px -4px 4px -4px; padding:2px 4px; }
+  h2 { margin:0; font-size:12px; }
+  input, select, button {
+    background:#000; color:#0f0; border:1px solid #0f0;
+    font-family:Consolas,monospace; font-size:11px; padding:2px 4px; margin:2px 0;
+  }
+  button { cursor:pointer; }
+  .small { font-size:11px; opacity:0.85; }
+  canvas { background:#000; border:1px solid #0f0; display:block; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- ATLAS VIEWER -->
+  <div class="panel">
+    <div class="title"><h2>Copyright law 1989 to 2026 made by Emmaunel david hamer enasto ENASTO 13700 • UNIFIED MEMORY ATLAS</h2></div>
+    <div id="atlasSummary" class="small"></div>
+    <pre id="atlasList"></pre>
+  </div>
+
+  <!-- FILTERS + DETAIL -->
+  <div class="panel">
+    <div class="title"><h2>FILTERS • DETAIL</h2></div>
+    <div class="small">
+      Tier:
+      <select id="tierFilter">
+        <option value="">ALL</option>
+        <option value="1">OS_2026</option>
+        <option value="2">BIN_6000</option>
+        <option value="3">BIN_16000</option>
+      </select>
+      Type:
+      <select id="typeFilter">
+        <option value="">ALL</option>
+        <option value="6">OS_EVENT</option>
+        <option value="4">AI_MEMORY</option>
+        <option value="8">UNIV_RITUAL</option>
+      </select>
+      <button id="applyFilterBtn">APPLY</button>
+    </div>
+    <pre id="detailView"></pre>
+  </div>
+
+  <!-- INJECT PANEL -->
+  <div class="panel">
+    <div class="title"><h2>INJECT • OS EVENT / AI MEMORY / UNIVERSE RITUAL</h2></div>
+    <div class="small">
+      Kind:
+      <select id="injectKind">
+        <option value="OS_EVENT">OS_EVENT</option>
+        <option value="AI_MEMORY">AI_MEMORY</option>
+        <option value="UNIV_RITUAL">UNIV_RITUAL</option>
+      </select>
+    </div>
+    <div class="small">
+      Region: <input id="injectRegion" value="0" style="width:60px;">
+      Offset(bits): <input id="injectOffset" value="0" style="width:80px;">
+      Length(bits): <input id="injectLength" value="64" style="width:80px;">
+    </div>
+    <div class="small">
+      Payload / Note:
+      <input id="injectNote" style="width:95%;" placeholder="Payload / Note">
+    </div>
+    <button id="injectBtn">REGISTER IN ATLAS</button>
+  </div>
+
+  <!-- BINARY VIEW -->
+  <div class="panel">
+    <div class="title"><h2>BINARY VIEW (LAST ENTRY)</h2></div>
+    <pre id="binaryView"></pre>
+  </div>
+
+  <!-- PREVIEW SCREEN -->
+  <div class="panel">
+    <div class="title"><h2>PREVIEW SCREEN • LIVE BINARY STREAM</h2></div>
+    <pre id="previewScreen"></pre>
+  </div>
+
+  <!-- MATRIX + BINARY ANIMATION -->
+  <div class="panel">
+    <div class="title"><h2>MATRIX • FALLING BITS (LAST ENTRY)</h2></div>
+    <canvas id="matrixCanvas" width="320" height="180"></canvas>
+  </div>
+
+  <!-- 3D MEMORY CUBE -->
+  <div class="panel">
+    <div class="title"><h2>3D MEMORY CUBE • REGION/OFFSET/LENGTH</h2></div>
+    <canvas id="cubeCanvas" width="320" height="180"></canvas>
+  </div>
+
+  <!-- UNIVERSE RITUAL GLYPH -->
+  <div class="panel">
+    <div class="title"><h2>UNIVERSE RITUAL GLYPH • NOTE SIGNATURE</h2></div>
+    <canvas id="glyphCanvas" width="320" height="180"></canvas>
+  </div>
+
+  <!-- AI NEURON MAP -->
+  <div class="panel">
+    <div class="title"><h2>AI NEURON MAP • NOTE ACTIVATION</h2></div>
+    <canvas id="neuronCanvas" width="320" height="180"></canvas>
+  </div>
+
+</div>
+
+<script>
+// ===== CONSTANTS =====
+const ERA_13700 = 0x13700;
+const TIER_OS_2026 = 1;
+const TIER_BIN_6000 = 2;
+const TIER_BIN_16000 = 3;
+
+const TYPE_OS_EVENT = 6;
+const TYPE_AI_MEMORY = 4;
+const TYPE_UNIV_RITUAL = 8;
+
+const FLAG_HOT = 1 << 0;
+const FLAG_AI  = 1 << 2;
+const FLAG_UNIV = 1 << 3;
+const FLAG_OS = 1 << 4;
+const FLAG_RIT = 1 << 6;
+
+// ===== ADDRESS CLASS =====
+class E13700Address {
+  constructor(tier, subEra, type, regionId, offsetBits, lengthBits) {
+    this.era = ERA_13700;
+    this.tier = tier;
+    this.subEra = subEra;
+    this.type = type;
+    this.regionId = BigInt(regionId);
+    this.offsetBits = BigInt(offsetBits);
+    this.lengthBits = BigInt(lengthBits);
+  }
+  toString() {
+    return `E13700:${this.tier}:${this.subEra.toString(16)}:${this.type}:${this.regionId}:${this.offsetBits}:${this.lengthBits}`;
+  }
+}
+
+// ===== ATLAS =====
+class E13700AtlasEntry {
+  constructor(addr, flags, hash, sourceTag, note) {
+    this.addr = addr;
+    this.flags = flags;
+    this.hash = hash;
+    this.sourceTag = sourceTag;
+    this.note = note || "";
+  }
+}
+
+class E13700MemoryAtlas {
+  constructor() { this.entries = []; }
+  add(entry) { this.entries.push(entry); return entry; }
+  filtered(tier, type) {
+    return this.entries.filter(e => {
+      if (tier && e.addr.tier !== tier) return false;
+      if (type && e.addr.type !== type) return false;
+      return true;
+    });
+  }
+}
+
+const atlas13700 = new E13700MemoryAtlas();
+
+// ===== HASH =====
+function hashString(s) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return "0x" + (h >>> 0).toString(16);
+}
+
+// ===== REGISTRATION =====
+function registerOsEvent(offset, note) {
+  const addr = new E13700Address(TIER_OS_2026, 0x2026, TYPE_OS_EVENT, 0n, BigInt(offset), 1n);
+  const hash = hashString(note);
+  return atlas13700.add(new E13700AtlasEntry(addr, FLAG_HOT | FLAG_OS, hash, "OS2026", note));
+}
+
+function registerAiMemory(region, offset, length, note) {
+  const addr = new E13700Address(TIER_BIN_6000, 0x3000, TYPE_AI_MEMORY, BigInt(region), BigInt(offset), BigInt(length));
+  const hash = hashString(note);
+  return atlas13700.add(new E13700AtlasEntry(addr, FLAG_HOT | FLAG_AI, hash, "AI", note));
+}
+
+function registerUniverseRitual(region, offset, length, note) {
+  const addr = new E13700Address(TIER_BIN_6000, 0x3000, TYPE_UNIV_RITUAL, BigInt(region), BigInt(offset), BigInt(length));
+  const hash = hashString(note);
+  return atlas13700.add(new E13700AtlasEntry(addr, FLAG_HOT | FLAG_UNIV | FLAG_RIT, hash, "RITUAL", note));
+}
+
+// ===== UI ELEMENTS =====
+const atlasSummary = document.getElementById("atlasSummary");
+const atlasList = document.getElementById("atlasList");
+const detailView = document.getElementById("detailView");
+const binaryView = document.getElementById("binaryView");
+const previewScreen = document.getElementById("previewScreen");
+
+const tierFilter = document.getElementById("tierFilter");
+const typeFilter = document.getElementById("typeFilter");
+const applyFilterBtn = document.getElementById("applyFilterBtn");
+
+const injectKind = document.getElementById("injectKind");
+const injectRegion = document.getElementById("injectRegion");
+const injectOffset = document.getElementById("injectOffset");
+const injectLength = document.getElementById("injectLength");
+const injectNote = document.getElementById("injectNote");
+const injectBtn = document.getElementById("injectBtn");
+
+// Visual canvases
+const matrixCanvas = document.getElementById("matrixCanvas");
+const matrixCtx = matrixCanvas.getContext("2d");
+const cubeCanvas = document.getElementById("cubeCanvas");
+const cubeCtx = cubeCanvas.getContext("2d");
+const glyphCanvas = document.getElementById("glyphCanvas");
+const glyphCtx = glyphCanvas.getContext("2d");
+const neuronCanvas = document.getElementById("neuronCanvas");
+const neuronCtx = neuronCanvas.getContext("2d");
+
+let lastEntry = null;
+
+// ===== RENDER ATLAS =====
+function renderAtlas() {
+  const tierVal = tierFilter.value ? parseInt(tierFilter.value) : null;
+  const typeVal = typeFilter.value ? parseInt(typeFilter.value) : null;
+
+  const list = atlas13700.filtered(tierVal, typeVal);
+
+  atlasSummary.textContent = `Entries: ${atlas13700.entries.length}  |  Filtered: ${list.length}`;
+
+  let out = "IDX  TIER  SUBERA  TYPE  REGION  OFFSET(bits)  LENGTH(bits)  FLAGS  SRC   HASH\n";
+  out += "---------------------------------------------------------------------------------\n";
+
+  list.forEach((e, i) => {
+    const a = e.addr;
+    out += `${i}    ${a.tier}     ${a.subEra.toString(16)}    ${a.type}     ${a.regionId} ${a.offsetBits} ${a.lengthBits} ${e.flags}    ${e.sourceTag} ${e.hash}\n`;
+  });
+
+  atlasList.textContent = out;
+}
+
+applyFilterBtn.addEventListener("click", renderAtlas);
+
+// ===== INJECT =====
+injectBtn.addEventListener("click", () => {
+  const kind = injectKind.value;
+  const region = injectRegion.value || "0";
+  const offset = injectOffset.value || "0";
+  const length = injectLength.value || "64";
+  const note = injectNote.value || "";
+
+  let entry;
+  if (kind === "OS_EVENT") entry = registerOsEvent(offset, note);
+  if (kind === "AI_MEMORY") entry = registerAiMemory(region, offset, length, note);
+  if (kind === "UNIV_RITUAL") entry = registerUniverseRitual(region, offset, length, note);
+
+  lastEntry = entry;
+
+  // DETAIL PANEL
+  detailView.textContent =
+    `ADDR:\n  ERA: ${entry.addr.era}\n  TIER: ${entry.addr.tier}\n  SUBERA: 0x${entry.addr.subEra.toString(16)}\n  TYPE: ${entry.addr.type}\n  REGION: ${entry.addr.regionId}\n  OFFSET: ${entry.addr.offsetBits} bits\n  LENGTH: ${entry.addr.lengthBits} bits\n\nFLAGS: ${entry.flags}\nSOURCE: ${entry.sourceTag}\nHASH: ${entry.hash}\n\nNOTE:\n${entry.note}`;
+
+  // BINARY VIEW
+  binaryView.textContent =
+    `REGION: ${entry.addr.regionId.toString(2).padStart(64,"0")}\n` +
+    `OFFSET: ${entry.addr.offsetBits.toString(2).padStart(64,"0")}\n` +
+    `LENGTH: ${entry.addr.lengthBits.toString(2).padStart(64,"0")}\n` +
+    `FLAGS:  ${entry.flags.toString(2).padStart(16,"0")}`;
+
+  // PREVIEW SCREEN
+  previewScreen.textContent =
+    `LIVE BINARY STREAM:\n\n` +
+    entry.addr.regionId.toString(2).padStart(64,"0") + "\n" +
+    entry.addr.offsetBits.toString(2).padStart(64,"0") + "\n" +
+    entry.addr.lengthBits.toString(2).padStart(64,"0") + "\n\n" +
+    `PAYLOAD:\n${entry.note}`;
+
+  renderAtlas();
+});
+
+// ===== MATRIX ANIMATION =====
+let matrixCols = Math.floor(matrixCanvas.width / 10);
+let matrixDrops = Array(matrixCols).fill(0);
+let matrixBits = "01";
+
+function drawMatrix() {
+  matrixCtx.fillStyle = "rgba(0,0,0,0.1)";
+  matrixCtx.fillRect(0,0,matrixCanvas.width,matrixCanvas.height);
+  matrixCtx.fillStyle = "#0f0";
+  matrixCtx.font = "10px Consolas";
+
+  for (let i = 0; i < matrixCols; i++) {
+    let text = matrixBits[Math.floor(Math.random()*matrixBits.length)];
+    if (lastEntry) {
+      const stream = lastEntry.addr.regionId.toString(2) +
+                     lastEntry.addr.offsetBits.toString(2) +
+                     lastEntry.addr.lengthBits.toString(2);
+      text = stream[(matrixDrops[i] + i) % stream.length] || "0";
+    }
+    matrixCtx.fillText(text, i*10, matrixDrops[i]*10);
+    if (matrixDrops[i]*10 > matrixCanvas.height && Math.random() > 0.975) {
+      matrixDrops[i] = 0;
+    }
+    matrixDrops[i]++;
+  }
+  requestAnimationFrame(drawMatrix);
+}
+
+// ===== 3D MEMORY CUBE =====
+let cubeAngle = 0;
+function drawCube() {
+  cubeCtx.fillStyle = "#000";
+  cubeCtx.fillRect(0,0,cubeCanvas.width,cubeCanvas.height);
+  cubeCtx.strokeStyle = "#0f0";
+  cubeCtx.lineWidth = 1;
+
+  const cx = cubeCanvas.width/2;
+  const cy = cubeCanvas.height/2;
+  const size = 40;
+
+  const regionNorm = lastEntry ? Number(lastEntry.addr.regionId % 64n) / 64 : 0.3;
+  const offsetNorm = lastEntry ? Number(lastEntry.addr.offsetBits % 64n) / 64 : 0.6;
+  const lengthNorm = lastEntry ? Number(lastEntry.addr.lengthBits % 64n) / 64 : 0.9;
+
+  const depth = 60 + lengthNorm*40;
+
+  const points = [
+    {x:-size,y:-size,z:-size},
+    {x: size,y:-size,z:-size},
+    {x: size,y: size,z:-size},
+    {x:-size,y: size,z:-size},
+    {x:-size,y:-size,z: size},
+    {x: size,y:-size,z: size},
+    {x: size,y: size,z: size},
+    {x:-size,y: size,z: size},
+  ];
+
+  const rotY = cubeAngle;
+  const rotX = cubeAngle * 0.7;
+
+  const projected = points.map(p => {
+    let x = p.x;
+    let y = p.y;
+    let z = p.z;
+
+    let xz = x*Math.cos(rotY) - z*Math.sin(rotY);
+    let zz = x*Math.sin(rotY) + z*Math.cos(rotY);
+    x = xz; z = zz;
+
+    let yz = y*Math.cos(rotX) - z*Math.sin(rotX);
+    zz = y*Math.sin(rotX) + z*Math.cos(rotX);
+    y = yz; z = zz;
+
+    const scale = depth / (depth + z);
+    return {
+      x: cx + x*scale,
+      y: cy + y*scale
+    };
+  });
+
+  const edges = [
+    [0,1],[1,2],[2,3],[3,0],
+    [4,5],[5,6],[6,7],[7,4],
+    [0,4],[1,5],[2,6],[3,7]
+  ];
+
+  cubeCtx.beginPath();
+  edges.forEach(e => {
+    cubeCtx.moveTo(projected[e[0]].x, projected[e[0]].y);
+    cubeCtx.lineTo(projected[e[1]].x, projected[e[1]].y);
+  });
+  cubeCtx.stroke();
+
+  cubeCtx.fillStyle = "#0f0";
+  cubeCtx.fillText("REGION:" + (lastEntry ? lastEntry.addr.regionId.toString() : "0"), 4, 12);
+  cubeCtx.fillText("OFFSET:" + (lastEntry ? lastEntry.addr.offsetBits.toString() : "0"), 4, 24);
+  cubeCtx.fillText("LENGTH:" + (lastEntry ? lastEntry.addr.lengthBits.toString() : "0"), 4, 36);
+
+  cubeAngle += 0.01;
+  requestAnimationFrame(drawCube);
+}
+
+// ===== UNIVERSE RITUAL GLYPH =====
+function drawGlyph() {
+  glyphCtx.fillStyle = "#000";
+  glyphCtx.fillRect(0,0,glyphCanvas.width,glyphCanvas.height);
+  glyphCtx.strokeStyle = "#0f0";
+  glyphCtx.lineWidth = 1;
+
+  const w = glyphCanvas.width;
+  const h = glyphCanvas.height;
+  const cx = w/2;
+  const cy = h/2;
+
+  const note = lastEntry ? lastEntry.note : "";
+  const len = note.length || 1;
+
+  glyphCtx.beginPath();
+  for (let i = 0; i < len; i++) {
+    const ch = note.charCodeAt(i) || 0;
+    const angle = (i / len) * Math.PI * 2;
+    const radius = 20 + (ch % 60);
+    const x = cx + Math.cos(angle)*radius;
+    const y = cy + Math.sin(angle)*radius;
+    if (i === 0) glyphCtx.moveTo(x,y);
+    else glyphCtx.lineTo(x,y);
+  }
+  glyphCtx.closePath();
+  glyphCtx.stroke();
+
+  glyphCtx.fillStyle = "#0f0";
+  glyphCtx.fillText("RITUAL GLYPH", 4, 12);
+  requestAnimationFrame(drawGlyph);
+}
+
+// ===== AI NEURON MAP =====
+function drawNeuronMap() {
+  neuronCtx.fillStyle = "#000";
+  neuronCtx.fillRect(0,0,neuronCanvas.width,neuronCanvas.height);
+
+  const w = neuronCanvas.width;
+  const h = neuronCanvas.height;
+  const note = lastEntry ? lastEntry.note : "";
+  const len = note.length || 1;
+
+  const neurons = 40;
+  const positions = [];
+  for (let i = 0; i < neurons; i++) {
+    positions.push({
+      x: Math.random()*w,
+      y: Math.random()*h
+    });
+  }
+
+  neuronCtx.strokeStyle = "#004400";
+  neuronCtx.lineWidth = 1;
+  for (let i = 0; i < neurons; i++) {
+    for (let j = i+1; j < neurons; j++) {
+      if (Math.random() < 0.05) {
+        neuronCtx.beginPath();
+        neuronCtx.moveTo(positions[i].x, positions[i].y);
+        neuronCtx.lineTo(positions[j].x, positions[j].y);
+        neuronCtx.stroke();
+      }
+    }
+  }
+
+  for (let i = 0; i < neurons; i++) {
+    const ch = note.charCodeAt(i % len) || 0;
+    const act = (ch % 255) / 255;
+    const r = 2 + act*4;
+    neuronCtx.beginPath();
+    neuronCtx.fillStyle = `rgba(0,255,0,${0.2+act*0.8})`;
+    neuronCtx.arc(positions[i].x, positions[i].y, r, 0, Math.PI*2);
+    neuronCtx.fill();
+  }
+
+  neuronCtx.fillStyle = "#0f0";
+  neuronCtx.fillText("AI NEURON MAP", 4, 12);
+  requestAnimationFrame(drawNeuronMap);
+}
+
+// ===== START ANIMATIONS =====
+renderAtlas();
+drawMatrix();
+drawCube();
+drawGlyph();
+drawNeuronMap();
+</script>
+
+</body>
+</html>
+>
+ >
